@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { Play, Pause } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Play, Pause, ZoomIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 // Custom hook to dynamically load images from a directory
@@ -18,9 +18,8 @@ function useDirectoryImages(directory: string) {
         setLoading(true)
         setError(null)
         
-        // Try to fetch a manifest file or use a known pattern
-        // Since we can't directly read directory contents in the browser,
-        // we'll try to load images by attempting to fetch them in sequence
+        // try to fetch a manifest file or use a known pattern
+        // try to load images by attempting to fetch them in sequence
         const imagePromises: Promise<string | null>[] = []
         const maxImages = 25 // Based on the known range
         
@@ -62,6 +61,10 @@ export default function Turntable360() {
   const [direction, setDirection] = useState(1) // 1 for forward (left), -1 for backward (right)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStartX, setDragStartX] = useState(0)
+  const [isMagnifierEnabled, setIsMagnifierEnabled] = useState(false)
+  const [magnifierPosition, setMagnifierPosition] = useState({ x: 0, y: 0 })
+  const [showMagnifier, setShowMagnifier] = useState(false)
+  const imageRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     if (!isPlaying || isDragging) return
@@ -70,7 +73,7 @@ export default function Turntable360() {
       setCurrentImageIndex((prevIndex) => {
         const nextIndex = prevIndex + direction
 
-        // Check boundaries and reverse direction
+        // check boundaries and reverse direction
         if (nextIndex >= images.length - 1) {
           setDirection(-1)
           return images.length - 1
@@ -115,6 +118,31 @@ export default function Turntable360() {
     setIsPlaying(!isPlaying)
   }
 
+  const handleMagnifierMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isMagnifierEnabled || !imageRef.current) return
+
+    const rect = imageRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    // Only show magnifier if cursor is within image bounds
+    if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+      setMagnifierPosition({ x, y })
+      setShowMagnifier(true)
+    } else {
+      setShowMagnifier(false)
+    }
+  }
+
+  const handleMagnifierLeave = () => {
+    setShowMagnifier(false)
+  }
+
+  const toggleMagnifier = () => {
+    setIsMagnifierEnabled(!isMagnifierEnabled)
+    setShowMagnifier(false)
+  }
+  
   const switchToPorsche = () => {
     setCurrentDirectory("/porsche")
     setCurrentImageIndex(0) // Reset to first image when switching
@@ -176,16 +204,45 @@ export default function Turntable360() {
         <div
           className="relative cursor-grab active:cursor-grabbing select-none"
           onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
+          onMouseMove={(e) => {
+            handleMouseMove(e)
+            handleMagnifierMove(e)
+          }}
           onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseLeave={(e) => {
+            handleMouseUp()
+            handleMagnifierLeave()
+          }}
+          style={{ cursor: isMagnifierEnabled && !isDragging ? "crosshair" : undefined }}
         >
           <img
+            ref={imageRef}
             src={images[currentImageIndex] || "/placeholder.svg"}
             alt={`Product view ${currentImageIndex + 1}`}
             className="w-full h-auto rounded-lg transition-opacity duration-75"
             draggable={false}
           />
+
+          {/* Magnifier */}
+          {isMagnifierEnabled && showMagnifier && imageRef.current && (
+            <div
+              className="absolute pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
+              style={{
+                width: "150px",
+                height: "150px",
+                left: `${magnifierPosition.x}px`,
+                top: `${magnifierPosition.y}px`,
+                transform: "translate(-50%, -50%)",
+                backgroundImage: `url(${images[currentImageIndex]})`,
+                backgroundSize: `${imageRef.current.width * 2}px ${imageRef.current.height * 2}px`,
+                backgroundPosition: `-${magnifierPosition.x * 2 - 75}px -${magnifierPosition.y * 2 - 75}px`,
+                backgroundRepeat: "no-repeat",
+                zIndex: 50,
+              }}
+            >
+              <div className="absolute inset-0 border-2 border-slate-400/50 rounded-full" />
+            </div>
+          )}
 
           {/* Rotation indicator */}
           <div className="absolute top-4 right-4 bg-black/20 backdrop-blur-sm rounded-full px-3 py-1">
@@ -224,6 +281,17 @@ export default function Turntable360() {
           <span>{isPlaying ? "Pause" : "Play"}</span>
         </Button>
 
+        <Button
+          onClick={toggleMagnifier}
+          variant="outline"
+          size="lg"
+          className={`flex items-center space-x-2 ${isMagnifierEnabled ? "bg-white border-black text-black" : "bg-transparent"}`}
+        >
+          <ZoomIn className="w-5 h-5" />
+          <span>Magnify</span>
+        </Button>
+
+
         <div className="text-sm text-white/50">
           Frame {currentImageIndex + 1} of {images.length}
         </div>
@@ -244,7 +312,9 @@ export default function Turntable360() {
       </div> */}
 
       <p className="text-sm text-white/50 text-center max-w-md">
-        {"Drag the image to manually rotate • Click play/pause to control automatic rotation"}
+      {isMagnifierEnabled
+          ? "Hover over the image to magnify details • Click Magnify to disable"
+          : "Drag the image to manually rotate • Click play/pause to control automatic rotation"}
       </p>
     </div>
   )
