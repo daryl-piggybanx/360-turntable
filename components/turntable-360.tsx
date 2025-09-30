@@ -5,6 +5,19 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { Play, Pause, ZoomIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { Variant } from "@/lib/data"
+
+/** Cloudinary */
+// import { Cloudinary, CloudinaryVideo } from "@cloudinary/url-gen";
+
+// const cld = new Cloudinary({
+//   cloud: {
+//     cloudName: 'dj0feyubj'
+//   }
+// });
+type Turntable360Props = {
+  variant?: Variant
+}
 
 // Custom hook to dynamically load images from a directory
 function useDirectoryImages(directory: string) {
@@ -53,8 +66,25 @@ function useDirectoryImages(directory: string) {
   return { images, loading, error }
 }
 
-export default function Turntable360() {
-  const [currentDirectory, setCurrentDirectory] = useState("/porsche")
+// Function to determine directory based on variant
+function getDirectoryForVariant(variant?: Variant): string {
+  if (!variant) return "/porsche"
+  
+  // Alternate between directories based on variant properties
+  // Using a combination of category and complexity to create variety
+  const categoryHash = variant.category.length
+  const complexityFactor = variant.complexity > 500 ? 1 : 0
+  const refractionFactor = variant.refractionRate > 70 ? 1 : 0
+  
+  // Create a simple hash to determine directory
+  const hash = (categoryHash + complexityFactor + refractionFactor) % 2
+  
+  return hash === 0 ? "/porsche" : "/jobs"
+}
+
+export default function Turntable360({ variant }: Turntable360Props) {
+  // Determine directory based on variant
+  const currentDirectory = getDirectoryForVariant(variant)
   const { images, loading, error } = useDirectoryImages(currentDirectory)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
@@ -65,6 +95,11 @@ export default function Turntable360() {
   const [magnifierPosition, setMagnifierPosition] = useState({ x: 0, y: 0 })
   const [showMagnifier, setShowMagnifier] = useState(false)
   const imageRef = useRef<HTMLImageElement>(null)
+
+  // Reset image index when variant changes
+  useEffect(() => {
+    setCurrentImageIndex(0)
+  }, [variant])
 
   useEffect(() => {
     if (!isPlaying || isDragging) return
@@ -87,7 +122,7 @@ export default function Turntable360() {
     }, 200) // adjust speed here
 
     return () => clearInterval(interval)
-  }, [isPlaying, direction, isDragging])
+  }, [isPlaying, direction, isDragging, images.length])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true)
@@ -142,16 +177,6 @@ export default function Turntable360() {
     setIsMagnifierEnabled(!isMagnifierEnabled)
     setShowMagnifier(false)
   }
-  
-  const switchToPorsche = () => {
-    setCurrentDirectory("/porsche")
-    setCurrentImageIndex(0) // Reset to first image when switching
-  }
-
-  const switchToJobs = () => {
-    setCurrentDirectory("/jobs")
-    setCurrentImageIndex(0) // Reset to first image when switching
-  }
 
   // Show loading state
   if (loading) {
@@ -201,6 +226,18 @@ export default function Turntable360() {
   return (
     <div className="flex flex-col items-center space-y-6">
       <div className="relative rounded-2xl shadow-2xl p-8 max-w-lg w-full">
+        {variant && (
+          <div className="absolute top-4 left-4 z-10 bg-black text-white px-4 py-2 rounded-full shadow-lg">
+            <div className="text-sm font-bold">{variant.name}</div>
+            <div className="text-xs opacity-90 capitalize">{variant.category}</div>
+          </div>
+        )}
+
+        {/* Directory indicator */}
+        <div className="absolute top-4 right-4 z-10 bg-black/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs">
+          {currentDirectory === "/porsche" ? "Porsche" : "Jobs"}
+        </div>
+
         <div
           className="relative cursor-grab active:cursor-grabbing select-none"
           onMouseDown={handleMouseDown}
@@ -245,28 +282,12 @@ export default function Turntable360() {
           )}
 
           {/* Rotation indicator */}
-          <div className="absolute top-4 right-4 bg-black/20 backdrop-blur-sm rounded-full px-3 py-1">
+          <div className="absolute bottom-4 right-4 bg-black/20 backdrop-blur-sm rounded-full px-3 py-1">
             <span className="text-white text-sm font-medium">
               {Math.round(((currentImageIndex / (images.length - 1)) - 0.5) * 90)}°
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Toggle between Porsche and Jobs */}
-      <div className="flex items-center space-x-2 mb-4">
-        <Button 
-          onClick={switchToPorsche}
-          variant={currentDirectory === "/porsche" ? "secondary" : "primary"}
-        >
-          Porsche
-        </Button>
-        <Button 
-          onClick={switchToJobs}
-          variant={currentDirectory === "/jobs" ? "secondary" : "primary"}
-        >
-          Jobs
-        </Button>
       </div>
 
       {/* Controls */}
@@ -291,28 +312,13 @@ export default function Turntable360() {
           <span>Magnify</span>
         </Button>
 
-
         <div className="text-sm text-white/50">
           Frame {currentImageIndex + 1} of {images.length}
         </div>
       </div>
 
-      {/* Progress bar */}
-      {/* <div className="w-full max-w-lg">
-        <div className="bg-slate-200 rounded-full h-2 overflow-hidden">
-          <div
-            className="bg-blue-500 h-full transition-all duration-150 ease-out"
-            style={{ width: `${(currentImageIndex / (images.length - 1)) * 100}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-xs text-slate-500 mt-1">
-          <span>Right (0°)</span>
-          <span>Left (45°)</span>
-        </div>
-      </div> */}
-
       <p className="text-sm text-white/50 text-center max-w-md">
-      {isMagnifierEnabled
+        {isMagnifierEnabled
           ? "Hover over the image to magnify details • Click Magnify to disable"
           : "Drag the image to manually rotate • Click play/pause to control automatic rotation"}
       </p>

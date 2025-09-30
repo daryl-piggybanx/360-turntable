@@ -1,0 +1,13 @@
+{
+  "cloudName": "dj0feyubj",
+  "directories": {
+    "porsche": {
+      "folder": "variation_porsche",
+      "count": 25
+    },
+    "jobs": {
+      "folder": "variation_jobs",
+      "count": 25
+    }
+  }
+}
