@@ -653,11 +653,26 @@ export const variants: Variant[] = [
   },
 ]
 
-export const getCategories = () => {
+// Memoize the categories to prevent infinite re-renders
+type Category = {
+  name: string
+  displayName: string
+  variants: Variant[]
+}
+
+let _cachedCategories: Category[] | null = null
+
+export const getCategories = (): Category[] => {
+  if (_cachedCategories) {
+    return _cachedCategories
+  }
+  
   const categories = Array.from(new Set(variants.map((v) => v.category)))
-  return categories.map((category) => ({
+  _cachedCategories = categories.map((category) => ({
     name: category,
     displayName: category.charAt(0).toUpperCase() + category.slice(1),
     variants: variants.filter((v) => v.category === category),
   }))
+  
+  return _cachedCategories
 }

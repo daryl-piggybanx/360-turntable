@@ -15,11 +15,86 @@ import type { Variant } from "@/lib/data"
 //     cloudName: 'dj0feyubj'
 //   }
 // });
+type VariantImageManifest = {
+  cloudName: string
+  defaultImageCount: number
+  directories: {
+    [key: string]: {
+      folder: string
+      count?: number
+      displayName?: string
+    }
+  }
+}
+
+function variantNameToKey(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, '-')
+}
+
+// load images from Cloudinary based on variant
+function useVariantImages(variant?: Variant) {
+  const [images, setImages] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [directoryKey, setDirectoryKey] = useState<string>('')
+
+  useEffect(() => {
+    async function loadImages() {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await fetch('/manifests/variant-images.json')
+        if (!response.ok) {
+          throw new Error('Failed to load variant image manifest')
+        }
+
+        const manifest: VariantImageManifest = await response.json()
+        
+        // convert variant name to directory key
+        const variantKey = variant ? variantNameToKey(variant.name) : 'porsche'
+        
+        // look up directory in manifest, fall back to first available directory
+        let directory = manifest.directories[variantKey]
+        
+        if (!directory) {
+          // fallback to first available directory if variant directory not found
+          const firstKey = Object.keys(manifest.directories)[0]
+          directory = manifest.directories[firstKey]
+          console.warn(`No directory found for variant "${variant?.name}", using fallback: ${firstKey}`)
+        }
+
+        setDirectoryKey(variantKey)
+
+        // use directory-specific count or fall back to default
+        const imageCount = directory.count ?? manifest.defaultImageCount
+
+        // generate Cloudinary URLs
+        const baseUrl = `https://res.cloudinary.com/${manifest.cloudName}/image/upload`
+        const imageUrls = Array.from({ length: imageCount }, (_, i) => {
+          const imageNumber = String(i + 1).padStart(2, '0')
+          return `${baseUrl}/${directory.folder}/img${imageNumber}.jpg`
+        })
+
+        setImages(imageUrls)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load images')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadImages()
+  }, [variant?.name])
+
+  return { images, loading, error, directoryKey }
+}
+
 type Turntable360Props = {
   variant?: Variant
 }
 
-// Custom hook to dynamically load images from a directory
+// dynamically load images from a directory
 function useDirectoryImages(directory: string) {
   const [images, setImages] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,26 +141,27 @@ function useDirectoryImages(directory: string) {
   return { images, loading, error }
 }
 
-// Function to determine directory based on variant
 function getDirectoryForVariant(variant?: Variant): string {
   if (!variant) return "/porsche"
   
-  // Alternate between directories based on variant properties
-  // Using a combination of category and complexity to create variety
+  // alternate between directories based on variant properties
   const categoryHash = variant.category.length
   const complexityFactor = variant.complexity > 500 ? 1 : 0
   const refractionFactor = variant.refractionRate > 70 ? 1 : 0
   
-  // Create a simple hash to determine directory
+  //  hash to determine directory
   const hash = (categoryHash + complexityFactor + refractionFactor) % 2
   
   return hash === 0 ? "/porsche" : "/jobs"
 }
 
 export default function Turntable360({ variant }: Turntable360Props) {
-  // Determine directory based on variant
+
   const currentDirectory = getDirectoryForVariant(variant)
   const { images, loading, error } = useDirectoryImages(currentDirectory)
+  // const { images, loading, error, directoryKey } = useVariantImages(variant)
+
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [direction, setDirection] = useState(1) // 1 for forward (left), -1 for backward (right)
@@ -96,7 +172,7 @@ export default function Turntable360({ variant }: Turntable360Props) {
   const [showMagnifier, setShowMagnifier] = useState(false)
   const imageRef = useRef<HTMLImageElement>(null)
 
-  // Reset image index when variant changes
+  // reset image index when variant changes
   useEffect(() => {
     setCurrentImageIndex(0)
   }, [variant])
@@ -160,7 +236,7 @@ export default function Turntable360({ variant }: Turntable360Props) {
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    // Only show magnifier if cursor is within image bounds
+    // only show magnifier if cursor is within image bounds
     if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
       setMagnifierPosition({ x, y })
       setShowMagnifier(true)
@@ -178,7 +254,7 @@ export default function Turntable360({ variant }: Turntable360Props) {
     setShowMagnifier(false)
   }
 
-  // Show loading state
+  
   if (loading) {
     return (
       <div className="flex flex-col items-center space-y-6">
@@ -194,7 +270,7 @@ export default function Turntable360({ variant }: Turntable360Props) {
     )
   }
 
-  // Show error state
+  // show error state
   if (error) {
     return (
       <div className="flex flex-col items-center space-y-6">
@@ -210,7 +286,6 @@ export default function Turntable360({ variant }: Turntable360Props) {
     )
   }
 
-  // Show empty state
   if (images.length === 0) {
     return (
       <div className="flex flex-col items-center space-y-6">
@@ -233,7 +308,7 @@ export default function Turntable360({ variant }: Turntable360Props) {
           </div>
         )}
 
-        {/* Directory indicator */}
+        {/* directory indicator */}
         <div className="absolute top-4 right-4 z-10 bg-black/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs">
           {currentDirectory === "/porsche" ? "Porsche" : "Jobs"}
         </div>

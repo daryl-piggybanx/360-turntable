@@ -7,6 +7,36 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }  
+}
+
+body {
+  @apply m-0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* background-image: linear-gradient(to bottom, #000000, #111111); */
+  background-color: #000000;
+  font-family: 'Sora', sans-serif;
+
+  /* attempt to fix scrollbar issue */
+  /* breaks: Start Here */
+  /* margin: 0;
+  overflow: hidden; */
+}
+
+h1, h2 {
+  font-family: 'TheanoDidot', serif;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -138,6 +168,49 @@
   overflow: hidden;
 }
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  20%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 5s infinite linear;
+  pointer-events: none;
+}
+.shimmer-overlay-dim {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.02) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 8s infinite linear;
+  pointer-events: none;
+}
+
 .grid-overlay {
   position: absolute;
   top: 0;
@@ -146,4 +219,115 @@
   height: 100%;
   background: radial-gradient(circle at center, rgba(30, 30, 30, 0) 0%, rgba(15, 15, 15, 0.8) 100%);
   pointer-events: none;
+}
+
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Adding hover color inversion classes */
+  .hover-invert-text:hover .text-foreground,
+  .hover-invert-text:hover .text-primary,
+  .hover-invert-text:hover .text-muted-foreground {
+    color: #242421 !important;
+  }
+
+  .hover-invert-progress:hover .progress-bar {
+    background: linear-gradient(to right, #242421, #242421) !important;
+  }
+
+  .hover-invert-progress:hover .progress-fill {
+    background: linear-gradient(to right, #242421, #242421) !important;
+  }
+
+  /* Adding metallic silver border effect */
+  .metallic-silver-border {
+    position: relative;
+    border: 3px solid transparent;
+    background: linear-gradient(#242421, #242421) padding-box,
+      linear-gradient(135deg, #e8e8e8 0%, #a8a8a8 25%, #ffffff 50%, #a8a8a8 75%, #808080 100%) border-box;
+    box-shadow:
+    0 0 20px rgba(232, 232, 232, 0.4),  /* Close glow - increased opacity */
+    0 0 40px rgba(255, 255, 255, 0.2),  /* Medium glow - white center */
+    0 0 60px rgba(232, 232, 232, 0.1),  /* Far glow - extended reach */
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),  /* Top highlight */
+    inset 0 -1px 0 rgba(128, 128, 128, 0.2); /* Bottom shadow */
+    overflow: hidden;
+    border-radius: 8px;
+  }
+
+  .metallic-silver-border::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(
+      135deg,
+      rgba(232, 232, 232, 0.9) 0%,
+      rgba(168, 168, 168, 0.7) 25%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(168, 168, 168, 0.7) 75%,
+      rgba(128, 128, 128, 0.5) 100%
+    );
+    border-radius: inherit;
+    z-index: -1;
+    /* animation: metallic-shimmer 3s ease-in-out infinite; */
+    filter: blur(1px);
+  }
+
+  .metallic-silver-border::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
+    border-radius: inherit;
+    /*animation: metallic-sweep 6s linear infinite;*/
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .bg-muted {
+    background-color: var(--muted);
+    box-shadow: 0 0 20px rgba(232, 232, 232, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0
+      rgba(128, 128, 128, 0.5);
+  }
+}
+
+
+@keyframes shimmer {
+ 0% {
+   transform: translateX(-100%);
+ }
+ 20%,
+ 100% {
+   transform: translateX(100%);
+ }
+}
+
+@keyframes metallic-shimmer {
+ 0%,
+ 100% {
+   opacity: 0.8;
+   filter: brightness(1);
+ }
+ 50% {
+   opacity: 1;
+   filter: brightness(1.2);
+ }
+}
+
+@keyframes metallic-sweep {
+ 0% {
+   transform: translateX(-100%) skewX(-15deg);
+ }
+ 100% {
+   transform: translateX(200%) skewX(-15deg);
+ }
 }

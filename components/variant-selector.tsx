@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { getCategories } from "@/lib/data"
 import type { Variant } from "@/lib/data"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -18,21 +18,43 @@ interface VariantSelectorProps {
 }
 
 export default function VariantSelector({ selectedVariant, onVariantChange }: VariantSelectorProps) {
-  const categories = getCategories()
+  const categories = useMemo(() => getCategories(), [])
   const [openCategory, setOpenCategory] = useState(categories[0].name)
   const [categoryFilteredVariants, setCategoryFilteredVariants] = useState<Record<string, Variant[]>>({})
+  const [isHovered, setIsHovered] = useState(false)
 
-  const handleCategoryFilterChange = (categoryName: string, filteredVariants: Variant[]) => {
+  const handleTouchStart = () => {
+
+    setIsHovered(true)
+  }
+
+  const handleTouchEnd = () => {
+    // small delay before removing hover state to allow for visual feedback
+    setTimeout(() => setIsHovered(false), 150)
+  }
+
+  const handleCategoryFilterChange = useCallback((categoryName: string, filteredVariants: Variant[]) => {
     setCategoryFilteredVariants(prev => ({
       ...prev,
       [categoryName]: filteredVariants
     }))
-  }
+  }, [])
+
+  // Create stable callback functions for each category
+  const categoryCallbacks = useMemo(() => {
+    const callbacks: Record<string, (filteredVariants: Variant[]) => void> = {}
+    categories.forEach(category => {
+      callbacks[category.name] = (filteredVariants: Variant[]) => {
+        handleCategoryFilterChange(category.name, filteredVariants)
+      }
+    })
+    return callbacks
+  }, [categories, handleCategoryFilterChange])
 
   return (
     <div className="space-y-4">
       {/* Category Sections */}
-      {categories.map((category) => {
+      {categories.map((category: { name: string; displayName: string; variants: Variant[] }) => {
         const isOpen = openCategory === category.name
         const filteredVariants = categoryFilteredVariants[category.name] || category.variants
 
@@ -61,7 +83,7 @@ export default function VariantSelector({ selectedVariant, onVariantChange }: Va
                   <div className="p-4 border-b border-white/10">
                     <FilterSort
                       variants={category.variants}
-                      onFilteredVariantsChange={(filtered) => handleCategoryFilterChange(category.name, filtered)}
+                      onFilteredVariantsChange={categoryCallbacks[category.name]}
                       hideCategory={true}
                     />
                   </div>
@@ -76,7 +98,11 @@ export default function VariantSelector({ selectedVariant, onVariantChange }: Va
                           <button
                             key={variant.name}
                             onClick={() => onVariantChange(variant)}
-                            className="relative border border-white/20 rounded-lg p-4 text-left hover:bg-white/5 transition-all group"
+                            className={`relative bg-black metallic-silver-border hover-invert-text hover-invert-progress transition-all`}
+                            // onMouseEnter={() => setIsHovered(true)}
+                            // onMouseLeave={() => setIsHovered(false)}
+                            // onTouchStart={handleTouchStart}
+                            // onTouchEnd={handleTouchEnd}
                           >
                             {isSpecialty && <Diamond className="absolute top-3 right-3 w-5 h-5 text-white" />}
 

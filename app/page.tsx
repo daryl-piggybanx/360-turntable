@@ -4,7 +4,7 @@ import { useState } from "react"
 import Turntable360 from "@/components/turntable-360"
 import VariantSelector from "@/components/variant-selector"
 import { variants } from "@/lib/data"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 
 export default function Home() {
   const [selectedVariant, setSelectedVariant] = useState(variants[0])
@@ -12,6 +12,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-grid-pattern bg-black text-white justify-center p-4 relative overflow-hidden">
+      <div className="shimmer-overlay" />
       <div className="relative z-10">
         <div className="text-center py-6 md:py-8 space-y-2">
           {/* <h1 className="text-2xl md:text-3xl font-mono tracking-wider">{">> VARIANT ANALYSIS <<"}</h1> */}
@@ -48,6 +49,9 @@ export default function Home() {
 
       <Dialog open={showTurntable} onOpenChange={setShowTurntable}>
         <DialogContent className="max-w-4xl bg-black border-white/20">
+          <DialogTitle className="sr-only">
+            {selectedVariant.name}
+          </DialogTitle>
           <Turntable360 variant={selectedVariant} />
         </DialogContent>
       </Dialog>
